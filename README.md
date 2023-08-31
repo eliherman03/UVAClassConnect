@@ -2,7 +2,7 @@
 
 UVAClassConnect is a revolutionary iOS app designed for UVA students to seamlessly connect based on their class schedules. Whether you're looking for study partners, group project teammates, or just friends who share the same timetable, UVAClassConnect is here to bridge the gap.
 
-Features:
+**Features:**
 User Authentication: Securely register and log in using Firebase Authentication.
 Class Schedule Uploading: Easily upload and update your class schedule.
 Friend Finder: With a click, find and connect with friends who share similar schedules.
