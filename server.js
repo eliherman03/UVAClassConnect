@@ -1,79 +1,64 @@
-const mongoose = require('mongoose');
+const express       = require('express');
+const mongoose      = require('mongoose');
+const dotenv        = require('dotenv');
+const cors          = require('cors');
+const session       = require("express-session");
+const passport      = require("passport");
+const cookieParser  = require('cookie-parser')
+const path          = require('path')
+const getBaseUrl    = require('./middleware/getBaseUrl')
 
-mongoose.connect('mongodb+srv://<user>:<password>@coursedata.6v5cpou.mongodb.net/?retryWrites=true&w=majority', {
+const app = express();
+
+dotenv.config();
+
+app.use(session({
+    secret: process.env.EXPRESS_SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+mongoose.connect(process.env.MONGO_ACCESS, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-});
+    useCreateIndex: true,
+    useFindAndModify: false
+})
+    .then(() => { console.log("Successfully connected to Mongo DB")})
+    .catch(err => { console.log (`Database error: ${err}`)})
 
-mongoose.connection.on('connected', () => {
-    console.log('Connected to MongoDB');
-});
+mongoose.set('returnOriginal', false)
 
-mongoose.connection.on('error', (err) => {
-    console.error('Failed to connect to MongoDB', err);
-});
+//use built in body parser
+app.use(express.json());
 
-// const fs = require('fs');
-// const csvParser = require('csv-parser');
-// const mongoose = require('mongoose');
-// const express = require('express');
-// const cors = require('cors');
-// const Class = require('./models/Class');
-//
-// //require('dotenv').config();
-//
-// const app = express();
-// app.use(cors());
-// app.use(express.json());
-//
-// // Connect to MongoDB
-// mongoose.connect('mongodb+srv://hzt7wt:Raffi1234@coursedata.6v5cpou.mongodb.net/?retryWrites=true&w=majority', {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true,
-// });
-//
-// const db = mongoose.connection;
-//
-// db.on('error', console.error.bind(console, 'connection error:'));
-// db.once('open', function() {
-//     console.log("Connected to the database!");
-// });
-//
-// mongoose.connection.on('connected', () => {
-//     console.log('Connected to MongoDB');
-// });
-//
-// mongoose.connection.on('error', (err) => {
-//     console.error('Failed to connect to MongoDB', err);
-// });
-//
-// db.once('open', function() {
-//     console.log("Connected to the database!");
-//
-//     fs.createReadStream('/Users/eliherman/Desktop/classData.csv')
-//         .pipe(csvParser())
-//         .on('data', (row) => {
-//             const newClass = new Class(row);
-//             newClass.save();
-//         })
-//         .on('end', () => {
-//             console.log('CSV file successfully processed');
-//         });
-// });
-//
-// const PORT = 3000;
-// app.listen(PORT, () => {
-//     console.log(`Server running on http://localhost:${PORT}`);
-// });
-//
-// //const Class = require('./models/Class');
-//
-// app.get('/api/classes', async (req, res) => {
-//     try {
-//         const classes = await Class.find();
-//         res.json(classes);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// });
-//
+app.use(cookieParser())
+
+//allow cross origin resource sharing
+app.use(cors({credentials: true, origin: `${getBaseUrl()}`}))
+
+//use routes
+const authRoutes        = require('./routes/auth.routes')
+const usersRoutes       = require('./routes/users.routes');
+const coursesRoutes     = require('./routes/courses.routes');
+
+app.use('/auth', authRoutes)
+app.use('/api/users', usersRoutes);
+app.use('/api/courses', coursesRoutes);
+
+//Serve static assets if in production
+if(process.env.NODE_ENV === "production")
+{
+    app.use(express.static('client/build'))
+
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'))
+    })
+}
+
+//set port and listen
+const port = process.env.PORT || 8080;
+app.listen(port, () => console.log(`Server listening on port ${port}`));
